@@ -404,6 +404,17 @@ PJ_DECL(pj_status_t) pjsip_pres_parse_xpidf2(char *body, unsigned body_len,
 
 
 
+
+
+
+
+PJ_DECL(pj_status_t) pjsip_pres_create_dix(pj_pool_t* pool,
+                                           const pjsip_pres_status* status,
+                                           const pj_str_t* entity,
+                                           pjsip_msg_body** p_body);
+
+
+
 /**
  * @}
  */

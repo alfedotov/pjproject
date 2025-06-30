@@ -35,6 +35,10 @@ static pj_str_t STR_SUBSCRIBE_PARAM = { ";method=SUBSCRIBE", 17 };
 static pj_str_t STR_PRESENTITY = { "presentity", 10 };
 static pj_str_t STR_EMPTY_STRING = { NULL, 0 };
 
+
+
+
+
 static pj_xml_node* xml_create_node(pj_pool_t *pool, 
                                     pj_str_t *name, const pj_str_t *value)
 {
@@ -74,7 +78,7 @@ PJ_DEF(pjxpidf_pres*) pjxpidf_create(pj_pool_t *pool, const pj_str_t *uri_cstr)
     /* <presence> */
     pres = xml_create_node(pool, &STR_PRESENCE, NULL);
 
-    /* <presentity> */
+    /* <dialog-info> */
     presentity = xml_create_node(pool, &STR_PRESENTITY, NULL);
     pj_xml_add_node(pres, presentity);
 
@@ -298,3 +302,94 @@ PJ_DEF(pj_status_t) pjxpidf_set_status(pjxpidf_pres *pres, pj_bool_t online_stat
     return 0;
 }
 
+
+
+static pj_str_t STR_DIALOG      = { "dialog", 6 };
+static pj_str_t STR_DIALOG_INFO = { "dialog-info", 11 };
+static pj_str_t STR_ENTITY      = { "entity", 6 };
+static pj_str_t STR_STATE       = { "state", 5 };
+
+static pj_str_t STR_TRYING     = { "trying", 6 };
+static pj_str_t STR_PROCEEDING = { "proceeding", 10 };
+static pj_str_t STR_EARLY      = { "early", 5 };
+static pj_str_t STR_CONFIRMED  = { "confirmed", 9 };
+static pj_str_t STR_TERMINATED = { "terminated", 10 };
+
+
+
+static void xml_init_node(pj_pool_t* pool, pj_xml_node* node,
+    pj_str_t* name, const pj_str_t* value)
+{
+    pj_list_init(&node->attr_head);
+    pj_list_init(&node->node_head);
+    node->name = *name;
+    if (value) pj_strdup(pool, &node->content, value);
+    else node->content.ptr = NULL, node->content.slen = 0;
+}
+
+
+PJ_DEF(pjxpidf_pres*) dix_create(pj_pool_t* pool, const pj_str_t* uri_cstr)
+{
+    pjxpidf_pres* di;
+    pj_xml_node* dialog;
+    pj_xml_node* state;
+    pj_xml_attr* attr;
+    pj_str_t uri;
+
+    /* <dialog-info> */
+    di = xml_create_node(pool, &STR_DIALOG_INFO, NULL);
+
+    /* uri attribute */
+    uri.ptr = (char*)pj_pool_alloc(pool, uri_cstr->slen);
+    pj_strcpy(&uri, uri_cstr);
+
+    attr = xml_create_attr(pool, &STR_ENTITY, &uri);
+    pj_xml_add_attr(di, attr);
+
+    /* <dialog> */
+    dialog = xml_create_node(pool, &STR_DIALOG, NULL);
+    pj_xml_add_node(di, dialog);
+
+    /* state */
+    state = xml_create_node(pool, &STR_STATE, NULL);
+
+
+    //xml_init_node(pool, state, &STR_STATE, &STR_TRYING);
+    //xml_init_node(pool, state, &STR_STATE, &STR_PROCEEDING);
+    xml_init_node(pool, state, &STR_STATE, &STR_EARLY);
+    //xml_init_node(pool, state, &STR_STATE, &STR_CONFIRMED);
+    //xml_init_node(pool, state, &STR_STATE, &STR_TERMINATED);
+
+    pj_xml_add_node(dialog, state);
+
+    return di;
+}
+
+
+PJ_DEF(pj_status_t) dix_set_status(pjxpidf_pres* pres, pj_bool_t online_status)
+{
+    pj_xml_node* dialog;
+    pj_xml_node* state;
+    pj_xml_node* status;
+    pj_xml_attr* attr;
+
+    dialog = pj_xml_find_node(pres, &STR_DIALOG);
+    if (!dialog) {
+        pj_assert(0);
+        return -1;
+    }
+    state = pj_xml_find_node(dialog, &STR_STATE);
+    if (!state) {
+        pj_assert(0);
+        return -1;
+    }
+
+    attr = pj_xml_find_attr(state, &STR_STATE, NULL);
+    if (!attr) {
+        pj_assert(0);
+        return -1;
+    }
+
+    attr->value = (online_status ? STR_CONFIRMED : STR_CLOSED);
+    return 0;
+}

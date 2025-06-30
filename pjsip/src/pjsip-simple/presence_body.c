@@ -33,7 +33,7 @@
 static const pj_str_t STR_APPLICATION = { "application", 11 };
 static const pj_str_t STR_PIDF_XML =    { "pidf+xml", 8 };
 static const pj_str_t STR_XPIDF_XML =   { "xpidf+xml", 9 };
-
+static const pj_str_t STR_DIALOG_INFO_XML = { "dialog-info+xml", 15 };
 
 
 
@@ -292,5 +292,45 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_xpidf2(char *body, unsigned body_len,
 
     return PJ_SUCCESS;
 }
+
+extern PJ_DEF(pjxpidf_pres*) dix_create(pj_pool_t* pool, const pj_str_t* uri_cstr);
+
+
+
+PJ_DEF(pj_status_t) pjsip_pres_create_dix(pj_pool_t* pool,
+                                          const pjsip_pres_status* status,
+                                          const pj_str_t* entity,
+                                          pjsip_msg_body** p_body)
+{
+    /* Note: PJSIP implementation of XPIDF is not complete!
+     */
+    pjxpidf_pres* xpidf;
+    pjsip_msg_body* body;
+
+    PJ_LOG(4, (THIS_FILE, "Warning: XPIDF format is not fully supported "
+        "by PJSIP"));
+
+    /* Create XPIDF document. */
+    xpidf = dix_create(pool, entity);
+
+    /* Set basic status. */
+    //if (status->info_cnt > 0)
+    //    dix_set_status(xpidf, status->info[0].basic_open);
+    //else
+    //    dix_set_status(xpidf, PJ_FALSE);
+
+    body = PJ_POOL_ZALLOC_T(pool, pjsip_msg_body);
+    body->data = xpidf;
+    body->content_type.type = STR_APPLICATION;
+    body->content_type.subtype = STR_DIALOG_INFO_XML;
+    body->print_body = &pres_print_body;
+    body->clone_data = &xml_clone_data;
+
+    *p_body = body;
+
+    return PJ_SUCCESS;
+}
+
+
 
 

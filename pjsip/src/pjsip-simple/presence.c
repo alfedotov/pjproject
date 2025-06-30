@@ -69,6 +69,7 @@ typedef enum content_type_e
     CONTENT_TYPE_NONE,
     CONTENT_TYPE_PIDF,
     CONTENT_TYPE_XPIDF,
+    CONTENT_TYPE_DIX,
 } content_type_e;
 
 /*
@@ -137,8 +138,11 @@ static const pj_str_t STR_APPLICATION       = { "application", 11 };
 static const pj_str_t STR_PIDF_XML          = { "pidf+xml", 8};
 static const pj_str_t STR_XPIDF_XML         = { "xpidf+xml", 9};
 static const pj_str_t STR_APP_PIDF_XML      = { "application/pidf+xml", 20 };
-static const pj_str_t STR_APP_XPIDF_XML    = { "application/xpidf+xml", 21 };
+static const pj_str_t STR_APP_XPIDF_XML     = { "application/xpidf+xml", 21 };
 
+static const pj_str_t STR_DIALOG              = { "dialog", 6 };
+static const pj_str_t STR_DIALOG_INFO_XML     = { "dialog-info+xml", 15 };
+static const pj_str_t STR_APP_DIALOG_INFO_XML = { "application/dialog-info+xml", 27 };
 
 /*
  * Init presence module.
@@ -147,7 +151,7 @@ PJ_DEF(pj_status_t) pjsip_pres_init_module( pjsip_endpoint *endpt,
                                             pjsip_module *mod_evsub)
 {
     pj_status_t status;
-    pj_str_t accept[2];
+    pj_str_t accept[3];
 
     /* Check arguments. */
     PJ_ASSERT_RETURN(endpt && mod_evsub, PJ_EINVAL);
@@ -162,6 +166,7 @@ PJ_DEF(pj_status_t) pjsip_pres_init_module( pjsip_endpoint *endpt,
 
     accept[0] = STR_APP_PIDF_XML;
     accept[1] = STR_APP_XPIDF_XML;
+    accept[2] = STR_APP_DIALOG_INFO_XML;
 
     /* Register event package to event module. */
     status = pjsip_evsub_register_pkg( &mod_presence, &STR_PRESENCE, 
@@ -272,9 +277,15 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
     if (!event) {
         return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_REQUEST);
     }
-    if (pj_stricmp(&event->event_type, &STR_PRESENCE) != 0) {
+    if (pj_stricmp(&event->event_type, &STR_PRESENCE) == 0) {
+        
+    } else
+    if (pj_stricmp(&event->event_type, &STR_DIALOG) == 0) {
+        
+    } else {
         return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_EVENT);
     }
+
 
     /* Check that request contains compatible Accept header. */
     accept = (pjsip_accept_hdr*)
@@ -288,6 +299,10 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
             } else
             if (pj_stricmp(&accept->values[i], &STR_APP_XPIDF_XML)==0) {
                 content_type = CONTENT_TYPE_XPIDF;
+                break;
+            } else
+            if (pj_stricmp(&accept->values[i], &STR_APP_DIALOG_INFO_XML) == 0) {
+                content_type = CONTENT_TYPE_DIX;
                 break;
             }
         }
@@ -498,7 +513,11 @@ static pj_status_t pres_create_msg_body( pjsip_pres *pres,
 
         return pjsip_pres_create_xpidf(tdata->pool, &pres->status,
                                        &entity, &tdata->msg->body);
+    }
+    else if (pres->content_type == CONTENT_TYPE_DIX) {
 
+        return pjsip_pres_create_dix(tdata->pool, &pres->status,
+                                       &entity, &tdata->msg->body);
     } else {
         return PJSIP_SIMPLE_EBADCONTENT;
     }
